@@ -1,0 +1,11 @@
+{
+  "name": "backendproject",
+  "version": "1.0.0",
+  "description": "a backend project with hitesh sir(chai aur backend)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ishant",
+  "license": "ISC"
+}
