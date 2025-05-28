@@ -1,5 +1,6 @@
 
-//this function is only used to connect to db its like a wrapper function , in our app we have to connect to db thousands of times direcly calling asyncHandler will reduce our task of copy pasting the connection machenism to db.
+//this function is only used to connect to db its like a wrapper function , in our app we have to connect to db multiple times directy calling asyncHandler will reduce our task of copy pasting the connection machenism to db.
+
 //asyncHandler is a higher order function which takes another function as a parameter as returns a funciton
 //i think it as i studied debounce concept in which ,the debounce takes funciton and delay as parameter and returns another function
 

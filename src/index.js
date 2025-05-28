@@ -10,11 +10,12 @@ dotenv.config({
 
 connectDB()
 .then(()=>{
-  app.listen(process.env.PORT || 8000,()=>{
+  const port =process.env.PORT || 8000
+  let server=app.listen(port,()=>{
     console.log("server is running at port : 8000")
   }
 )
-app.on((err)=>{
+server.on("error",(err)=>{
 console.log("error in connection to db in index.js file"+err);
 })
 
