@@ -30,6 +30,7 @@ const userSchema = new Schema(
     },
     coverImage: {
       type: String,//cloudnary url
+      // required: true,
     },
     password: {
       type: String,
