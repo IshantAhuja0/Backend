@@ -51,4 +51,79 @@ const registerUser = asyncHandler(async (req, res) => {
     new ApiResponse(200, isUser, "User registered successfully")
   )
 })
-export { registerUser }
+
+const loginUser = asyncHandler(async (req, res) => {
+  /*
+  take email and password from req.body
+  check if exist and if not send error ApiResponse , also check if its not empty
+  match credential and send response if email or password not match with db
+  generate token and send to in response 
+  
+  */
+  const { email, username, password } = req.body
+  try {
+    if (!email || !username) throw new ApiError(400, "email is required but not provided in user.controller.js")
+
+    //if this username or email exist in db it will return .$or checks for more than one field in one query
+    const user = await User.findOne({
+      $or: [{ username }, { email }]
+    })
+    //problem can occur as we returned rather than throw this error . video 16 backend series
+    if (!user) return new ApiError(401, "user not exist against provided email or username")
+    //now we have to check for password ,we have defined a methord in user.modal.js for this but its not part of mongoose model so we can't access it by User as its part of mongoose.
+    // isPasswordCorrect is defined in modal and can be accessed by our return result or record of data , we have user(got after checking for email) which provides this methord.
+    const isPasswordCorrect = await user.isPasswordCorrect(password)
+    if (!isPasswordCorrect) return new ApiError(401, "provided password doesn't match . Try again ")
+
+    //generateRefreshToken and generateAccessToken these methords are same as previus written in modals can be accessed through user object.
+    const accessToken = await user.generateAccessToken()
+    const refreshToken = await user.generateRefreshToken()
+    if (!accessToken || !refreshToken) throw new ApiError(500, "problem while generating access or refresh tokens")
+    //save refresh token in db and return these tokens to user
+    //so we have to add refresh token in user object as its the instance of our user 
+    user.refreshToken = refreshToken
+    //to save this refreshToken (its kind of similar to update your record in db and adding a field like refreshToken in our case)
+    //as this is a db operation its checks for all required fiels as any other request to db and since we are just trying to add a token we can turn off these validation with validateBeforeSave:false.
+    await user.save({ validateBeforeSave: false })
+
+    //for sending data or response to user in cookies either we can update and send our user object or we make a db call to get our user and in this request use .select() to remove the fields like password and photo which are not good to send in response 
+
+    const loggedInDetail={
+      fullname:user.fullname,
+      username:user.username,
+      email:user.email,
+      refreshToken:user.refreshToken,
+      accessToken:user.accessToken,
+    }
+    //in case first makes problem we can use this query
+// or loggedInDetail=User.findOne(user._id).select("-password -avatar -coverImage -watchHistory")
+
+//this is for sending data through cookies to user in response.
+const options={
+  //through these our cookies are only modifiable through backend and can only be accessed not modified in frontend
+  httpOnly:true,
+  secure:true
+}
+return res.status(200)
+.cookie("accessToken",accessToken,options)
+.cookie("refreshToken",refreshToken,options)
+.json(200,{
+  user:loggedInDetail,accessToken,refreshToken
+},"User logged in successfully")
+ 
+  } catch (error) {
+throw new ApiError(500,"Internal server occured while loggin in user in user.controller.js"+error)
+  }
+})
+const logoutUser=asyncHandler(async(req,res)=>{
+const updatedUser=await User.findByIdAndUpdate(req.user._id,{$set:{refreshToken:undefined}})
+options={
+  httpOnly:true,
+  secure:true
+}
+return res.status(200)
+.clearCookie("accessToken",options)
+.clearCookie("refreshToken",options)
+.json(new ApiResponse(200,{},"User logged out"))
+})
+export { registerUser, loginUser, logoutUser }
