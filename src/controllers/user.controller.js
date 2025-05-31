@@ -2,7 +2,23 @@ import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/apiError.js";
 import { User } from "../models/user.modal.js";
 import uploadOnCloudinary from "../utils/cloudinary.js"
+import jwt from "jsonwebtoken"
 import ApiResponse from "../utils/ApiResponse.js";
+
+const generateAccessAndRefreshToken = async (user) => {
+  //generateRefreshToken and generateAccessToken these methods are same as previus written in modals can be accessed through user object.
+  const accessToken = await user.generateAccessToken()
+  const refreshToken = await user.generateRefreshToken()
+  if (!accessToken || !refreshToken) throw new ApiError(500, "problem while generating access or refresh tokens")
+  //save refresh token in db and return these tokens to user
+  //so we have to add refresh token in user object as its the instance of our user 
+  user.refreshToken = refreshToken
+  //to save this refreshToken (its kind of similar to update your record in db and adding a field like refreshToken in our case)
+  //as this is a db operation its checks for all required fiels as any other request to db and since we are just trying to add a token we can turn off these validation with validateBeforeSave:false.
+  await user.save({ validateBeforeSave: false })
+  return { accessToken, refreshToken }
+}
+
 const registerUser = asyncHandler(async (req, res) => {
   //avatar comes from multer and hence we can not get or from req.body
   console.log(req.body)
@@ -23,8 +39,8 @@ const registerUser = asyncHandler(async (req, res) => {
   //for files provided by multer
   //.fieles only comes after adding multer
   //if files exist -> check avatar[0] which provides a object ->  .path a variable in object to access path of image
-  const avatarLocalPath = req.files?.avatar[0]?.path
-  const coverImageLocalPath = req.files?.coverImage[0]?.path
+  const avatarLocalPath = req.files?.avatar?.[0].path
+  const coverImageLocalPath = req.files?.coverImage?.[0].path
   if (!avatarLocalPath) throw new ApiError(400, "Avatar is required")
   const avatarUploaded = await uploadOnCloudinary(avatarLocalPath)
 
@@ -62,68 +78,88 @@ const loginUser = asyncHandler(async (req, res) => {
   */
   const { email, username, password } = req.body
   try {
-    if (!email || !username) throw new ApiError(400, "email is required but not provided in user.controller.js")
+    if (!email && !username) throw new ApiError(400, "email is required but not provided in user.controller.js")
 
     //if this username or email exist in db it will return .$or checks for more than one field in one query
     const user = await User.findOne({
       $or: [{ username }, { email }]
     })
     //problem can occur as we returned rather than throw this error . video 16 backend series
-    if (!user) return new ApiError(401, "user not exist against provided email or username")
+    if (!user) throw new ApiError(401, "user not exist against provided email or username")
     //now we have to check for password ,we have defined a methord in user.modal.js for this but its not part of mongoose model so we can't access it by User as its part of mongoose.
     // isPasswordCorrect is defined in modal and can be accessed by our return result or record of data , we have user(got after checking for email) which provides this methord.
     const isPasswordCorrect = await user.isPasswordCorrect(password)
-    if (!isPasswordCorrect) return new ApiError(401, "provided password doesn't match . Try again ")
+    if (!isPasswordCorrect) throw new ApiError(401, "provided password doesn't match . Try again ")
 
-    //generateRefreshToken and generateAccessToken these methords are same as previus written in modals can be accessed through user object.
-    const accessToken = await user.generateAccessToken()
-    const refreshToken = await user.generateRefreshToken()
-    if (!accessToken || !refreshToken) throw new ApiError(500, "problem while generating access or refresh tokens")
-    //save refresh token in db and return these tokens to user
-    //so we have to add refresh token in user object as its the instance of our user 
-    user.refreshToken = refreshToken
-    //to save this refreshToken (its kind of similar to update your record in db and adding a field like refreshToken in our case)
-    //as this is a db operation its checks for all required fiels as any other request to db and since we are just trying to add a token we can turn off these validation with validateBeforeSave:false.
-    await user.save({ validateBeforeSave: false })
+    //function written above for generation of access and refresh token 
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user)
 
     //for sending data or response to user in cookies either we can update and send our user object or we make a db call to get our user and in this request use .select() to remove the fields like password and photo which are not good to send in response 
 
-    const loggedInDetail={
-      fullname:user.fullname,
-      username:user.username,
-      email:user.email,
-      refreshToken:user.refreshToken,
-      accessToken:user.accessToken,
+    const loggedInDetail = {
+      fullname: user.fullname,
+      username: user.username,
+      email: user.email,
+      refreshToken: user.refreshToken,
     }
     //in case first makes problem we can use this query
-// or loggedInDetail=User.findOne(user._id).select("-password -avatar -coverImage -watchHistory")
+    // or loggedInDetail=User.findOne(user._id).select("-password -avatar -coverImage -watchHistory")
 
-//this is for sending data through cookies to user in response.
-const options={
-  //through these our cookies are only modifiable through backend and can only be accessed not modified in frontend
-  httpOnly:true,
-  secure:true
-}
-return res.status(200)
-.cookie("accessToken",accessToken,options)
-.cookie("refreshToken",refreshToken,options)
-.json(200,{
-  user:loggedInDetail,accessToken,refreshToken
-},"User logged in successfully")
- 
+    //this is for sending data through cookies to user in response.
+    const options = {
+      //through these our cookies are only modifiable through backend and can only be accessed not modified in frontend
+      httpOnly: true,
+      secure: true
+    }
+    return res.status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(new ApiResponse(200, {
+        user: loggedInDetail, accessToken, refreshToken
+      }, "User logged in successfully"))
+
   } catch (error) {
-throw new ApiError(500,"Internal server occured while loggin in user in user.controller.js"+error)
+    throw new ApiError(500, "Internal server occured while loggin in user in user.controller.js" + error)
   }
 })
-const logoutUser=asyncHandler(async(req,res)=>{
-const updatedUser=await User.findByIdAndUpdate(req.user._id,{$set:{refreshToken:undefined}})
-options={
-  httpOnly:true,
-  secure:true
-}
-return res.status(200)
-.clearCookie("accessToken",options)
-.clearCookie("refreshToken",options)
-.json(new ApiResponse(200,{},"User logged out"))
+const logoutUser = asyncHandler(async (req, res) => {
+  const updatedUser = await User.findByIdAndUpdate(req.user._id, { $set: { refreshToken: undefined } })
+  const options = {
+    httpOnly: true,
+    secure: true
+  }
+  return res.status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged out"))
 })
-export { registerUser, loginUser, logoutUser }
+
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  try {
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+    if (!incomingRefreshToken) throw new ApiError(401, "Unauthorized request")
+
+    //while generating refresh token we have given _id in payload so we can access that same id after decoding token
+    const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
+
+    const user = await User.findById(decodedToken?._id)
+    if (!user) throw new ApiError(401, "invalid refresh token ")
+    if (user?.refreshToken !== incomingRefreshToken) throw new ApiError(401, "Refresh token expired or not valid")
+
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user)
+    const options = {
+      httpOnly: true,
+      secure: true
+    }
+    return res.status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(new ApiResponse(200, {
+        user: loggedInDetail, accessToken, refreshToken
+      }, "Access token refreshed"))
+  } catch (error) {
+    throw new ApiError(500, "Internal server occured while refreshing access token in user.controller.js" + error)
+
+  }
+})
+export { registerUser, loginUser, logoutUser, refreshAccessToken }
