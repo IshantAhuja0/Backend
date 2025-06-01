@@ -158,8 +158,96 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         user: loggedInDetail, accessToken, refreshToken
       }, "Access token refreshed"))
   } catch (error) {
-    throw new ApiError(500, "Internal server occured while refreshing access token in user.controller.js" + error)
-
+    throw new ApiError(500, "Internal server error occured while refreshing access token in user.controller.js " + error)
+    
   }
 })
-export { registerUser, loginUser, logoutUser, refreshAccessToken }
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body
+    const userFromMiddleware = req.user?._id
+    const user = await User.findById(userFromMiddleware)
+    const isCorrect = await user.isPasswordCorrect(oldPassword)
+    if (!isCorrect) throw new ApiError(401, "Invalid currect password")
+      user.password = newPassword
+    await user.save({ validateBeforeSave: false })
+    return res.status(200).json(new ApiResponse(200, {}, "password changed successfully"))
+  } catch (error) {
+    
+    throw new ApiError(500, "Internal server error occured while changing password user.controller.js " + error)
+  }
+})
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+  const currentUser = req.user
+  if (!currentUser) throw new ApiError(401, "no user is logged in ")
+    return res.status(200).json(new ApiResponse(200, { user: currentUser }, "current user fetched successfully"))
+})
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  try {
+    const { fullname, email } = req.body
+    if (!fullname || !email) throw new ApiError(4011, "fullname and email not provided . necessary for update")
+      const user = req.user
+    const result = await User.findByIdAndUpdate(user._id,
+      {
+        $set: {
+          fullname,
+          email
+        }
+      },
+      //this parameter return the updated record by itself
+      { new: true }
+    ).select("-password")
+    return res.status(200).json(new ApiResponse(200, { user }, "account details updated successfully"))
+  } catch (error) {
+  throw new ApiError(500, "Internal server error occured while updating user account details user.controller.js " + error)
+  
+}
+})
+const updateUserAvatar = asyncHandler(async (req, res) => {
+try {
+    const avaterLocalPath = req.file?.path
+    if (!avaterLocalPath) throw new ApiError(401, "avatar not found! in updateUserAvatart user.controller.js")
+      const avatar = await uploadOnCloudinary(avaterLocalPath)
+    if (!avatar.url) throw new ApiError(401, "error while uploading avatar in updateUserAvatart user.controller.js")
+      const userId = req.user?._id
+    const user = await User.findByIdAndUpdate(userId,
+      {
+        $set: {
+          avatar: avatar.url
+        }
+      },
+      {
+        new: true
+      }
+    ).select("-password")
+    return res.status(200).json(new ApiResponse(200,{user},"update avatar successfully"))
+} catch (error) {
+  
+  throw new ApiError(500, "Internal server error occured while updating avatar user.controller.js " + error)
+}
+})
+const updateUserCoverImageAvatar = asyncHandler(async (req, res) => {
+try {
+    const coverImageLocalPath = req.file?.path
+    if (!coverImageLocalPath) throw new ApiError(401, "coverImage not found! in updateUserCoverImage user.controller.js")
+      const coverImage = await uploadOnCloudinary(avaterLocalPath)
+    if (!coverImage.url) throw new ApiError(401, "error while uploading coverImage in updateUserCoverImage user.controller.js")
+      const userId = req.user?._id
+    const user = await User.findByIdAndUpdate(userId,
+      {
+        $set: {
+          coverImage: coverImage.url
+        }
+      },
+      {
+        new: true
+      }
+    ).select("-password")
+    return res.status(200).json(new ApiResponse(200,{user},"update cover image successfully"))
+} catch (error) {
+  
+  throw new ApiError(500, "Internal server error occured while updating cover image user.controller.js " + error)
+}
+})
+export { registerUser, loginUser, logoutUser, refreshAccessToken, getCurrentUser, changeCurrentPassword, updateUserAvatar, updateAccountDetails, updateUserCoverImageAvatar }
