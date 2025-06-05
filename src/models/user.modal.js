@@ -25,12 +25,22 @@ const userSchema = new Schema(
       index: true,
     },
     avatar: {
-      type: String,//cloudnary url
-      required: true,
+      url:{
+        type: String,//cloudnary url
+        required: true,
+      },
+      public_id:{
+        type: String,//cloudnary url
+        required: true,
+      }
     },
     coverImage: {
-      type: String,//cloudnary url
-      // required: true,
+      url:{
+        type: String,//cloudnary url
+      },
+      public_id:{
+        type: String,//cloudnary url
+      }
     },
     password: {
       type: String,

@@ -1,7 +1,7 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/apiError.js";
 import { User } from "../models/user.modal.js";
-import uploadOnCloudinary from "../utils/cloudinary.js"
+import uploadOnCloudinary, { deleteFromCloudinary } from "../utils/cloudinary.js"
 import jwt from "jsonwebtoken"
 import ApiResponse from "../utils/ApiResponse.js";
 
@@ -50,7 +50,10 @@ const registerUser = asyncHandler(async (req, res) => {
   }
   const user = await User.create({
     fullname,
-    avatar: avatarUploaded.url,
+    avatar: {
+      url: avatarUploaded.url,
+      public_id: avatarUploaded.public_id,
+    },
     coverImage: coverImageUploaded.url || "",
     email,
     password,
@@ -86,7 +89,8 @@ const loginUser = asyncHandler(async (req, res) => {
     })
     //problem can occur as we returned rather than throw this error . video 16 backend series
     if (!user) throw new ApiError(401, "user not exist against provided email or username")
-    //now we have to check for password ,we have defined a methord in user.modal.js for this but its not part of mongoose model so we can't access it by User as its part of mongoose.
+    //now we have to check for password ,we have defined a method in user.modal.js for this but its not part of mongoose model so we can't access it by User as its not part of mongoose.
+
     // isPasswordCorrect is defined in modal and can be accessed by our return result or record of data , we have user(got after checking for email) which provides this methord.
     const isPasswordCorrect = await user.isPasswordCorrect(password)
     if (!isPasswordCorrect) throw new ApiError(401, "provided password doesn't match . Try again ")
@@ -159,7 +163,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       }, "Access token refreshed"))
   } catch (error) {
     throw new ApiError(500, "Internal server error occured while refreshing access token in user.controller.js " + error)
-    
+
   }
 })
 const changeCurrentPassword = asyncHandler(async (req, res) => {
@@ -169,11 +173,11 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     const user = await User.findById(userFromMiddleware)
     const isCorrect = await user.isPasswordCorrect(oldPassword)
     if (!isCorrect) throw new ApiError(401, "Invalid currect password")
-      user.password = newPassword
+    user.password = newPassword
     await user.save({ validateBeforeSave: false })
     return res.status(200).json(new ApiResponse(200, {}, "password changed successfully"))
   } catch (error) {
-    
+
     throw new ApiError(500, "Internal server error occured while changing password user.controller.js " + error)
   }
 })
@@ -181,13 +185,13 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 const getCurrentUser = asyncHandler(async (req, res) => {
   const currentUser = req.user
   if (!currentUser) throw new ApiError(401, "no user is logged in ")
-    return res.status(200).json(new ApiResponse(200, { user: currentUser }, "current user fetched successfully"))
+  return res.status(200).json(new ApiResponse(200, { user: currentUser }, "current user fetched successfully"))
 })
 const updateAccountDetails = asyncHandler(async (req, res) => {
   try {
     const { fullname, email } = req.body
     if (!fullname || !email) throw new ApiError(4011, "fullname and email not provided . necessary for update")
-      const user = req.user
+    const user = req.user
     const result = await User.findByIdAndUpdate(user._id,
       {
         $set: {
@@ -200,54 +204,178 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     ).select("-password")
     return res.status(200).json(new ApiResponse(200, { user }, "account details updated successfully"))
   } catch (error) {
-  throw new ApiError(500, "Internal server error occured while updating user account details user.controller.js " + error)
-  
-}
+    throw new ApiError(500, "Internal server error occured while updating user account details user.controller.js " + error)
+
+  }
 })
 const updateUserAvatar = asyncHandler(async (req, res) => {
-try {
-    const avaterLocalPath = req.file?.path
-    if (!avaterLocalPath) throw new ApiError(401, "avatar not found! in updateUserAvatart user.controller.js")
-      const avatar = await uploadOnCloudinary(avaterLocalPath)
-    if (!avatar.url) throw new ApiError(401, "error while uploading avatar in updateUserAvatart user.controller.js")
-      const userId = req.user?._id
-    const user = await User.findByIdAndUpdate(userId,
+  try {
+    const avatarLocalPath = req.file?.path;
+    if (!avatarLocalPath) {
+      throw new ApiError(401, "Avatar not found! in updateUserAvatar user.controller.js");
+    }
+
+    // Upload new avatar to Cloudinary
+    const avatar = await uploadOnCloudinary(avatarLocalPath);
+    if (!avatar?.url) {
+      throw new ApiError(401, "Error while uploading avatar in updateUserAvatar user.controller.js");
+    }
+
+    const userId = req.user?._id;
+    const oldUser = await User.findById(userId);
+
+    // Store old public_id before updating
+    const oldPublicId = oldUser?.avatar?.public_id;
+
+    // Update user with new avatar
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
       {
         $set: {
-          avatar: avatar.url
-        }
+          avatar: {
+            url: avatar.url,
+            public_id: avatar.public_id,
+          },
+        },
       },
-      {
-        new: true
+      { new: true }
+    ).select("-password");
+
+    // Delete the old image from Cloudinary if it exists
+    if (oldPublicId) {
+      const deleteResult = await deleteFromCloudinary(oldPublicId);
+      if (!deleteResult || deleteResult.result !== "ok") {
+        console.warn("⚠️ Failed to delete old image from Cloudinary");
       }
-    ).select("-password")
-    return res.status(200).json(new ApiResponse(200,{user},"update avatar successfully"))
-} catch (error) {
-  
-  throw new ApiError(500, "Internal server error occured while updating avatar user.controller.js " + error)
-}
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { user: updatedUser }, "Avatar updated successfully"));
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "Internal server error occurred while updating avatar in user.controller.js: " + error
+    );
+  }
+
 })
-const updateUserCoverImageAvatar = asyncHandler(async (req, res) => {
-try {
-    const coverImageLocalPath = req.file?.path
-    if (!coverImageLocalPath) throw new ApiError(401, "coverImage not found! in updateUserCoverImage user.controller.js")
-      const coverImage = await uploadOnCloudinary(avaterLocalPath)
-    if (!coverImage.url) throw new ApiError(401, "error while uploading coverImage in updateUserCoverImage user.controller.js")
-      const userId = req.user?._id
-    const user = await User.findByIdAndUpdate(userId,
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  try {
+    const coverImageLocalPath = req.file?.path;
+    if (!coverImageLocalPath) {
+      throw new ApiError(401, "coverImage not found! in updateUserCoverImage user.controller.js");
+    }
+
+    // Upload new avatar to Cloudinary
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+    if (!coverImage?.url) {
+      throw new ApiError(401, "Error while uploading coverImage in updateUserCoverImage user.controller.js");
+    }
+
+    const userId = req.user?._id;
+    const oldUser = await User.findById(userId);
+
+    // Store old public_id before updating
+    const oldPublicId = oldUser?.avatar?.public_id;
+
+    // Update user with new avatar
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
       {
         $set: {
-          coverImage: coverImage.url
-        }
+          coverImage: {
+            url: coverImage.url,
+            public_id: coverImage.public_id,
+          },
+        },
       },
-      {
-        new: true
+      { new: true }
+    ).select("-password");
+
+    // Delete the old image from Cloudinary if it exists
+    if (oldPublicId) {
+      const deleteResult = await deleteFromCloudinary(oldPublicId);
+      if (!deleteResult || deleteResult.result !== "ok") {
+        console.warn("⚠️ Failed to delete old image from Cloudinary");
       }
-    ).select("-password")
-    return res.status(200).json(new ApiResponse(200,{user},"update cover image successfully"))
-} catch (error) {
-  
-  throw new ApiError(500, "Internal server error occured while updating cover image user.controller.js " + error)
-}
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { user: updatedUser }, "Cover Image updated successfully"));
+  } catch (error) {
+
+    throw new ApiError(500, "Internal server error occured while updating cover image user.controller.js " + error)
+  }
 })
-export { registerUser, loginUser, logoutUser, refreshAccessToken, getCurrentUser, changeCurrentPassword, updateUserAvatar, updateAccountDetails, updateUserCoverImageAvatar }
+//aggeration pipeline is used here
+const getUserChannelProfile=asyncHandler(async (req,res)=>{
+const username=req.params
+//each object in User.aggregate represent a stage of aggeration
+if(!username?.trim())throw new ApiError(401,"username is missing")
+  // this counts no. of subscribers of a user 
+ const channel= await User.aggregate([
+//in first stage we are finding record based on username as we normally do it with collection.find() or User.find()
+{
+  $match:{
+    username:username?.toLowerCase()
+  }
+},
+//in second stage we are looking for a specific field in a table in order to replace it with a document. like if we have a document book storing auther_id , we have to replace auther_id with actual detail store in other document
+//we written  that in our record we have a field named _id  replace that(means gives data against it) with field named channel lies in subscriptions document and store it as subscribers
+{
+  //in subscriptionSchema channel is an id containing id of user which owns a channel and in our record its out id. so basically we are matching our _id with channel_id in subscriptionSchema the count of this will be our subscribers
+  $lookup:{
+    from: "subscriptions",
+    localField:"_id",
+    foreignField:"channel",
+    as:"subscribers"
+  }
+},
+//in this lookup we are finding if a record in subscriptionSchema has subscriber=_id(our id ) it means we have subscribed to that channel and the count result from this lookup gives no. of channels to which we subscribed.
+{
+  $lookup:{
+    from:"subscriptions",
+    localField:"_id",
+    foreignField:"subscriber",
+    as:"subscribedTo"
+  }
+},
+{
+  $addFields:{
+  subscribersCount:{
+    $size:"$subscribers"
+  },
+  channelsSubscribedToCount:{
+    $size:"$subscribedTo"
+  },
+  isSubscribedTo:{
+    $cond:{
+      if:{$in:[req.user?._id,"$subscribers.subscriber"]},
+      then:true,
+      else:false,
+    }
+  }
+  }
+},
+{
+  $project:{
+    fullname:1,
+    username:1,
+    subscribersCount:1,
+    channelsSubscribedToCount:1,
+    isSubscribedTo:1,
+    avatar:1,
+    coverImage:1,
+    email:1,
+  }
+}
+])
+if(!channel?.lenght){
+  throw new ApiError(404,"channel doesn't exist")
+}
+return res.status(200)
+.json(new ApiResponse(200,channel[0],"user channel found successfully"))
+})
+export { registerUser, loginUser, logoutUser, refreshAccessToken, getCurrentUser, changeCurrentPassword, updateUserAvatar, updateAccountDetails, updateUserCoverImage, getUserChannelProfile }
