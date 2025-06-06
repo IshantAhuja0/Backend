@@ -309,73 +309,130 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Internal server error occured while updating cover image user.controller.js " + error)
   }
 })
+
 //aggeration pipeline is used here
-const getUserChannelProfile=asyncHandler(async (req,res)=>{
-const username=req.params
-//each object in User.aggregate represent a stage of aggeration
-if(!username?.trim())throw new ApiError(401,"username is missing")
+//through this function the user is getting information about a specific channel like freecodecamp has subscribers... 
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  const username = req.params
+  //each object in User.aggregate represent a stage of aggeration
+  if (!username?.trim()) throw new ApiError(401, "username is missing")
   // this counts no. of subscribers of a user 
- const channel= await User.aggregate([
-//in first stage we are finding record based on username as we normally do it with collection.find() or User.find()
-{
-  $match:{
-    username:username?.toLowerCase()
-  }
-},
-//in second stage we are looking for a specific field in a table in order to replace it with a document. like if we have a document book storing auther_id , we have to replace auther_id with actual detail store in other document
-//we written  that in our record we have a field named _id  replace that(means gives data against it) with field named channel lies in subscriptions document and store it as subscribers
-{
-  //in subscriptionSchema channel is an id containing id of user which owns a channel and in our record its out id. so basically we are matching our _id with channel_id in subscriptionSchema the count of this will be our subscribers
-  $lookup:{
-    from: "subscriptions",
-    localField:"_id",
-    foreignField:"channel",
-    as:"subscribers"
-  }
-},
-//in this lookup we are finding if a record in subscriptionSchema has subscriber=_id(our id ) it means we have subscribed to that channel and the count result from this lookup gives no. of channels to which we subscribed.
-{
-  $lookup:{
-    from:"subscriptions",
-    localField:"_id",
-    foreignField:"subscriber",
-    as:"subscribedTo"
-  }
-},
-{
-  $addFields:{
-  subscribersCount:{
-    $size:"$subscribers"
-  },
-  channelsSubscribedToCount:{
-    $size:"$subscribedTo"
-  },
-  isSubscribedTo:{
-    $cond:{
-      if:{$in:[req.user?._id,"$subscribers.subscriber"]},
-      then:true,
-      else:false,
+  const channel = await User.aggregate([
+    //in first stage we are finding record based on username as we normally do it with collection.find() or User.find()
+    {
+      $match: {
+        //we haven't converted this string to objectId format , so it may produce error
+        username: username?.toLowerCase()
+      }
+    },
+    //in second stage we are looking for a specific field in a table in order to replace it with a document. like if we have a document book storing auther_id , we have to replace auther_id with actual detail stored in other document
+    //we written  that in our record we have a field named _id  replace that(means gives data against it) with field named channel lies in subscriptions document and store it as subscribers
+    {
+      //in subscriptionSchema channel is an id containing id of user which owns a channel and in our record its out id. so basically we are matching our _id with channel_id in subscriptionSchema the count of this will be our subscribers
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers"
+      }
+    },
+    //in this lookup we are finding if a record in subscriptionSchema has subscriber=_id(our id ) it means we have subscribed to that channel and the count result from this lookup gives no. of channels to which we subscribed.
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribedTo"
+      }
+    },
+    {
+      $addFields: {
+        subscribersCount: {
+          $size: "$subscribers"
+        },
+        channelsSubscribedToCount: {
+          $size: "$subscribedTo"
+        },
+        //this checks if me as a user has subscribed to the channel for which am looking for.
+        isSubscribedTo: {
+          $cond: {
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+            then: true,
+            else: false,
+          }
+        }
+      }
+    },
+    {
+      $project: {
+        fullname: 1,
+        username: 1,
+        subscribersCount: 1,
+        channelsSubscribedToCount: 1,
+        isSubscribedTo: 1,
+        avatar: 1,
+        coverImage: 1,
+        email: 1,
+      }
     }
+  ])
+  if (!channel?.lenght) {
+    throw new ApiError(404, "channel doesn't exist")
   }
-  }
-},
-{
-  $project:{
-    fullname:1,
-    username:1,
-    subscribersCount:1,
-    channelsSubscribedToCount:1,
-    isSubscribedTo:1,
-    avatar:1,
-    coverImage:1,
-    email:1,
-  }
-}
-])
-if(!channel?.lenght){
-  throw new ApiError(404,"channel doesn't exist")
-}
-return res.status(200)
-.json(new ApiResponse(200,channel[0],"user channel found successfully"))
+  return res.status(200)
+    .json(new ApiResponse(200, channel[0], "user channel found successfully"))
 })
-export { registerUser, loginUser, logoutUser, refreshAccessToken, getCurrentUser, changeCurrentPassword, updateUserAvatar, updateAccountDetails, updateUserCoverImage, getUserChannelProfile }
+
+const getWatchHistory = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user?._id)
+      }
+    },
+    //in this stage we are looking for fetching object of videos against if provided in watchHistory array to get info of our watch history.
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        //we are writing a subpipeline , we got video object of watch history now we need to get owner details from that object
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              //now for we got owner object of video but now we should also dug deep to get only necessary info. of owner thorough a sub-pipeline
+              pipeline: [
+                //project is used to pick specific fields form a record or object
+                {
+                  $project: {
+                    fullname: 1,
+                    username: 1,
+                    avatar: 1
+                  }
+                },
+                //as we het data in form of array and we have to access first item of it , for simplicity in frontend we make this structure simple to return just an array.
+                {
+                  //this will over-write owner object and assing it first item of owner as written
+                  $add: {
+                    owner: {
+                      $first: "$owner"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+
+        ]
+      },
+    },
+  ])
+  if(!user)throw new ApiError(404,"failed to find watch history of user")
+    res.status(200).json(new ApiResponse(200,user[0].watchHistory,"watch history fetched successfully"))
+})
+export { registerUser, loginUser, logoutUser, refreshAccessToken, getCurrentUser, changeCurrentPassword, updateUserAvatar, updateAccountDetails, updateUserCoverImage, getUserChannelProfile, getWatchHistory }
