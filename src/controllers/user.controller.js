@@ -1,9 +1,10 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/apiError.js";
 import { User } from "../models/user.modal.js";
-import uploadOnCloudinary, { deleteFromCloudinary } from "../utils/cloudinary.js"
+import {uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js"
 import jwt from "jsonwebtoken"
 import ApiResponse from "../utils/ApiResponse.js";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (user) => {
   //generateRefreshToken and generateAccessToken these methods are same as previus written in modals can be accessed through user object.
@@ -127,7 +128,7 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 })
 const logoutUser = asyncHandler(async (req, res) => {
-  const updatedUser = await User.findByIdAndUpdate(req.user._id, { $set: { refreshToken: undefined } })
+  const updatedUser = await User.findByIdAndUpdate(req.user._id, { $unset: { refreshToken: 1 } }).select("-watchHistory -password -avatar -coverImage -createdAt -updatedAt -refreshToken -__v")
   const options = {
     httpOnly: true,
     secure: true
@@ -135,7 +136,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   return res.status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
-    .json(new ApiResponse(200, {}, "User logged out"))
+    .json(new ApiResponse(200, {updatedUser}, "User logged out"))
 })
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -313,15 +314,15 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 //aggeration pipeline is used here
 //through this function the user is getting information about a specific channel like freecodecamp has subscribers... 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-  const username = req.params
+  const {username} = req.params
   //each object in User.aggregate represent a stage of aggeration
+  console.log(username)
   if (!username?.trim()) throw new ApiError(401, "username is missing")
   // this counts no. of subscribers of a user 
   const channel = await User.aggregate([
     //in first stage we are finding record based on username as we normally do it with collection.find() or User.find()
     {
       $match: {
-        //we haven't converted this string to objectId format , so it may produce error
         username: username?.toLowerCase()
       }
     },
@@ -376,7 +377,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       }
     }
   ])
-  if (!channel?.lenght) {
+  if (!channel?.length) {
     throw new ApiError(404, "channel doesn't exist")
   }
   return res.status(200)
@@ -418,7 +419,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
                 //as we het data in form of array and we have to access first item of it , for simplicity in frontend we make this structure simple to return just an array.
                 {
                   //this will over-write owner object and assing it first item of owner as written
-                  $add: {
+                  $addFields: {
                     owner: {
                       $first: "$owner"
                     }
