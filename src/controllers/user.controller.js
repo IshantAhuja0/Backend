@@ -1,9 +1,9 @@
 import asyncHandler from "../utils/asyncHandler.js";
-import ApiError from "../utils/ApiError.js";
 import { User } from "../models/user.modal.js";
-import {uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js"
+import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js"
 import jwt from "jsonwebtoken"
 import ApiResponse from "../utils/ApiResponse.js";
+import ApiError from "../utils/ApiError.js";
 import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (user) => {
@@ -55,7 +55,10 @@ const registerUser = asyncHandler(async (req, res) => {
       url: avatarUploaded.url,
       public_id: avatarUploaded.public_id,
     },
-    coverImage: coverImageUploaded.url || "",
+    coverImage: {
+      url: coverImageUploaded.url || "",
+      public_id: coverImageUploaded.public_id || "",
+    },
     email,
     password,
     username: username.toLowerCase()
@@ -136,7 +139,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   return res.status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
-    .json(new ApiResponse(200, {updatedUser}, "User logged out"))
+    .json(new ApiResponse(200, { updatedUser }, "User logged out"))
 })
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -314,7 +317,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 //aggeration pipeline is used here
 //through this function the user is getting information about a specific channel like freecodecamp has subscribers... 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-  const {username} = req.params
+  const { username } = req.params
   //each object in User.aggregate represent a stage of aggeration
   console.log(username)
   if (!username?.trim()) throw new ApiError(401, "username is missing")
@@ -433,7 +436,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
       },
     },
   ])
-  if(!user)throw new ApiError(404,"failed to find watch history of user")
-    res.status(200).json(new ApiResponse(200,user[0].watchHistory,"watch history fetched successfully"))
+  if (!user) throw new ApiError(404, "failed to find watch history of user")
+  res.status(200).json(new ApiResponse(200, user[0].watchHistory, "watch history fetched successfully"))
 })
 export { registerUser, loginUser, logoutUser, refreshAccessToken, getCurrentUser, changeCurrentPassword, updateUserAvatar, updateAccountDetails, updateUserCoverImage, getUserChannelProfile, getWatchHistory }
