@@ -3,7 +3,7 @@ import { Video } from "../models/video.modal.js"
 import ApiError from "../utils/ApiError.js"
 import ApiResponse from "../utils/ApiResponse.js"
 import asyncHandler from "../utils/asyncHandler.js"
-import { uploadOnCloudinary } from "../utils/cloudinary.js"
+import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js"
 
 
 const getAllVideos = asyncHandler(async (req, res) => {
@@ -26,12 +26,12 @@ const publishAVideo = asyncHandler(async (req, res) => {
     const thumbnailUploaded = await uploadOnCloudinary(thumbnailLocalPath)
     if (!videoLocalPath) throw ApiError(404, "video file is required to upload video")
     const videoUploaded = await uploadOnCloudinary(videoLocalPath)
-    console.log(videoLocalPath)
 
     if (!thumbnailUploaded) throw ApiError(404, "failed to upload thumbnail on cloudinary")
     if (!videoUploaded) throw ApiError(404, "failed to upload video on cloudinary")
+    console.log(videoUploaded)
 
-    const video = Video.create({
+    const video = await Video.create({
       videoFile: {
         url: videoUploaded.url,
         public_id: videoUploaded.public_id
@@ -51,28 +51,100 @@ const publishAVideo = asyncHandler(async (req, res) => {
     if (!video) throw new ApiError(404, "video not uploaded. error while uploading video")
     return res.status(200).json(new ApiResponse(200, video, "video uploaded successfully"))
   } catch (error) {
-    throw new ApiError(500, "internal server occured while uploading video")
+    console.error("Error uploading video:", error);
+    throw new ApiError(500, "Internal server error while uploading video");
   }
+
 })
 
 const getVideoById = asyncHandler(async (req, res) => {
-  const { videoId } = req.params
-  //TODO: get video by id
+  try {
+    const { videoId } = req.params
+    //TODO: get video by id
+    if (!videoId) throw new ApiError(401, "video Id is required to get video")
+    const video = await Video.findById(videoId)
+    if (!video) throw new ApiError(404, "no video found against provided video id")
+    return res.status(200).json(new ApiResponse(200, video, "video fetched successfully"))
+  } catch (error) {
+    console.log("error occured while fetching video by id " + error)
+    throw new ApiError(500, "internal server error occured while fetching video from id")
+  }
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
-  const { videoId } = req.params
   //TODO: update video details like title, description, thumbnail
+  try {
+    const { videoId } = req.params
+    if (!videoId) throw new ApiError(401, "video Id is required to update video")
+    const update = {}
 
+    if (req.body.title) update.title = req.body.title
+    if (req.body.description) update.description = req.body.description
+    const updateThumbnailPath = req.file?.path
+    if (Object.keys(update).length === 0 && !updateThumbnailPath) throw new ApiError(401, "No fields provided to update")
+
+    if (updateThumbnailPath) {
+      // const updatedThumbnail=await uploadOnCloudinary(updateThumbnailPath)
+      const video = await Video.findById(videoId)
+      if (!video) throw new ApiError(404, "provided video id is not correct or invalid")
+
+      const publicId = video.thumbnail?.public_id
+      const deleteThumbnail = await deleteFromCloudinary(publicId, 'image')
+      const uploadNewthumbnail = await uploadOnCloudinary(updateThumbnailPath)
+
+      if (!uploadNewthumbnail) throw new ApiError(401, "error occured while updating thumbnail")
+      update.thumbnail = {
+        url: uploadNewthumbnail?.url,
+        public_id: uploadNewthumbnail?.public_id
+      };
+    }
+
+    const updatedVideo = await Video.findByIdAndUpdate(videoId, { $set: update }, { new: true, runValidators: true })
+    if (!updatedVideo) throw new ApiError(404, "no video found against provided video id")
+    return res.status(200).json(new ApiResponse(200, updatedVideo, "video updated successfully"))
+  } catch (error) {
+    console.log("internal server error occured while updating video", error)
+    throw new ApiError(500, "internal server error occured while updating video", error)
+  }
 })
 
 const deleteVideo = asyncHandler(async (req, res) => {
-  const { videoId } = req.params
-  //TODO: delete video
+  try {
+    const { videoId } = req.params
+    //TODO: delete video
+    if (!videoId) throw new ApiError(401, "video Id is required to delete video")
+    const videoDeleted = await Video.findByIdAndDelete(videoId)
+    if (!videoDeleted) throw new ApiError(404, "no video found against provided video id")
+    if (videoDeleted.thumbnail?.public_id) {
+      await deleteFromCloudinary(videoDeleted.thumbnail.public_id, 'image')
+    }
+    if (videoDeleted.video?.public_id) {
+      await deleteFromCloudinary(videoDeleted.video.public_id, 'video')
+    }
+    return res.status(200).json(new ApiResponse(200, videoDeleted, "video deleted successfully"))
+  } catch (error) {
+    console.log("internal server error occured while deleting video", error)
+    throw new ApiError(500, "internal server error occured while deleting video", error)
+  }
 })
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
-  const { videoId } = req.params
+  try {
+    const { videoId } = req.params
+    //TODO: delete video
+    if (!videoId) throw new ApiError(401, "video Id is required to toggle publish video status")
+    const video = await Video.findById(videoId)
+    if (!video) throw new ApiError(401, "video not found to update toggle")
+    const currentStatus = video.isPublished
+    const updatedStatus = currentStatus === true ? false : true
+    const updateStatus = await Video.updateOne(videoId, { $set: { isPublished: updatedStatus } })
+    if (!updateStatus) throw new ApiError(404, "problem occured while updating toggle status")
+    res.status(200).json(new ApiResponse(200, updateStatus, "updated toggle status successfully"))
+  } catch (error) {
+    console.log("internal server error occured while updating toggle status video", error)
+    throw new ApiError(500, "internal server error occured while updating toggle status video", error)
+  }
+
 })
 
 export {

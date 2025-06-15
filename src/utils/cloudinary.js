@@ -31,14 +31,14 @@ const uploadOnCloudinary = async (filePath) => {
     return null;
   }
 };
-const deleteFromCloudinary = async (publicId) => {
+const deleteFromCloudinary = async (publicId,fileType='image') => {
   try {
     if (!publicId) {
       console.error("public_id not recieved for deletion of image from cloudinary");
       return null;
     }
     const result = await cloudinary.uploader.destroy(publicId, {
-      resource_type: "auto"
+      resource_type: fileType
     })
     return result
   } catch (error) {

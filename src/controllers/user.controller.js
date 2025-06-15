@@ -247,7 +247,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
     // Delete the old image from Cloudinary if it exists
     if (oldPublicId) {
-      const deleteResult = await deleteFromCloudinary(oldPublicId);
+      const deleteResult = await deleteFromCloudinary(oldPublicId,'image');
       if (!deleteResult || deleteResult.result !== "ok") {
         console.warn("⚠️ Failed to delete old image from Cloudinary");
       }
@@ -299,7 +299,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 
     // Delete the old image from Cloudinary if it exists
     if (oldPublicId) {
-      const deleteResult = await deleteFromCloudinary(oldPublicId);
+      const deleteResult = await deleteFromCloudinary(oldPublicId,'image');
       if (!deleteResult || deleteResult.result !== "ok") {
         console.warn("⚠️ Failed to delete old image from Cloudinary");
       }
