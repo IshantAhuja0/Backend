@@ -137,7 +137,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     if (!video) throw new ApiError(401, "video not found to update toggle")
     const currentStatus = video.isPublished
     const updatedStatus = currentStatus === true ? false : true
-    const updateStatus = await Video.updateOne(videoId, { $set: { isPublished: updatedStatus } })
+    const updateStatus = await Video.updateOne({_id:videoId}, { $set: { isPublished: updatedStatus } })
     if (!updateStatus) throw new ApiError(404, "problem occured while updating toggle status")
     res.status(200).json(new ApiResponse(200, updateStatus, "updated toggle status successfully"))
   } catch (error) {
