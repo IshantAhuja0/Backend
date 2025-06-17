@@ -19,7 +19,6 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     Video.exists({ _id: videoId }),
     User.exists({ _id: userId }),
   ]);
-  //
   if (!videoExists) throw new ApiError(404, "Video not found.");
   if (!userExists) throw new ApiError(404, "User not found.");
   const isLiked = await Like.findOne({ video: videoId, likedBy: userId })

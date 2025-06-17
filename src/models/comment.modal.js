@@ -11,7 +11,7 @@ video:{
   ref:"Video",
   required:true
 },
-video:{
+owner:{
   type:Schema.Types.ObjectId,
   ref:"User",
   required:true
