@@ -394,7 +394,8 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         _id: new mongoose.Types.ObjectId(req.user?._id)
       }
     },
-    //in this stage we are looking for fetching object of videos against if provided in watchHistory array to get info of our watch history.
+    //in this stage we are looking for fetching object of videos against ids provided in watchHistory array to get info of our watch history.
+    // in lookup localField if we pass an array aggregation dont't treat it as a single entity rather it would match its all items in collection,like if we pass an array of ids it would lookup for each id and results accordingly
     {
       $lookup: {
         from: "videos",
@@ -419,7 +420,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
                     avatar: 1
                   }
                 },
-                //as we het data in form of array and we have to access first item of it , for simplicity in frontend we make this structure simple to return just an array.
+                //as we have data in form of array and we have to access first item of it , for simplicity in frontend we make this structure simple to return just an array.
                 {
                   //this will over-write owner object and assing it first item of owner as written
                   $addFields: {
