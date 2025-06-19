@@ -71,7 +71,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
   if (!isUser) return ApiError(500, "User not registered problem in insertion in db")
   return res.status(201).json(
-    new ApiResponse(200, isUser, "User registered successfully")
+    new ApiResponse(200, {isUser,avatarUploaded}, "User registered successfully")
   )
 })
 
