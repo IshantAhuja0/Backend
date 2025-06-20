@@ -1,18 +1,74 @@
 import { Router } from 'express';
 import {
-    getLikedVideos,
-    toggleCommentLike,
-    toggleVideoLike,
-    toggleTweetLike,
-} from "../controllers/like.controller.js"
-import {verifyJWT} from "../middlewares/auth.middleware.js"
+  getLikedVideos,
+  toggleCommentLike,
+  toggleVideoLike,
+  toggleTweetLike,
+} from "../controllers/like.controller.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
-router.use(verifyJWT); // Apply verifyJWT middleware to all routes in this file
+router.use(verifyJWT); // JWT auth for all routes
 
+/**
+ * @swagger
+ * tags:
+ *   name: Likes
+ *   description: Like and unlike videos, comments, and tweets
+ */
+
+/**
+ * @swagger
+ * /likes/toggle/v/{videoId}:
+ *   post:
+ *     summary: Toggle like on a video
+ *     tags: [Likes]
+ *     parameters:
+ *       - in: path
+ *         name: videoId
+ *         required: true
+ *         schema:
+ *           type: string
+ */
 router.route("/toggle/v/:videoId").post(toggleVideoLike);
+
+/**
+ * @swagger
+ * /likes/toggle/c/{commentId}:
+ *   post:
+ *     summary: Toggle like on a comment
+ *     tags: [Likes]
+ *     parameters:
+ *       - in: path
+ *         name: commentId
+ *         required: true
+ *         schema:
+ *           type: string
+ */
 router.route("/toggle/c/:commentId").post(toggleCommentLike);
+
+/**
+ * @swagger
+ * /likes/toggle/t/{tweetId}:
+ *   post:
+ *     summary: Toggle like on a tweet
+ *     tags: [Likes]
+ *     parameters:
+ *       - in: path
+ *         name: tweetId
+ *         required: true
+ *         schema:
+ *           type: string
+ */
 router.route("/toggle/t/:tweetId").post(toggleTweetLike);
+
+/**
+ * @swagger
+ * /likes/videos:
+ *   get:
+ *     summary: Get all liked videos of current user
+ *     tags: [Likes]
+ */
 router.route("/videos").get(getLikedVideos);
 
-export default router
+export default router;
