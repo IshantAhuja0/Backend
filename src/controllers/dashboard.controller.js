@@ -10,8 +10,8 @@ import { User } from "../models/user.modal.js"
 const getChannelStats = asyncHandler(async (req, res) => {
   // TODO: Get the channel stats like total video views, total subscribers, total videos, total likes etc.
   //suppose you are a youtuber and you have to see whole stats of your channel like total subscribers, videos, views etc.
-    const id=req.user
-  if(!id)throw ApiError(401,"failed to get channel video . user is not looged in")
+  const id = req.user
+  if (!id) throw ApiError(401, "failed to get channel video . user is not looged in")
   const info = await User.aggregate([
     //as our youtuber is looged in we fetched his/her details through _id
     {
@@ -56,7 +56,7 @@ const getChannelStats = asyncHandler(async (req, res) => {
           {
             $project: {
               _id: 1,
-              views:1,
+              views: 1,
               likesCount: 1
             }
           }
@@ -89,45 +89,51 @@ const getChannelStats = asyncHandler(async (req, res) => {
       }
     }
   ])
-if(!info?.length)throw new ApiError(404,"Failed to get channel stats from db")
-res.status(200).json(new ApiResponse(200,info[0],"fetched channel stats successfully"))
+  if (!info?.length) throw new ApiError(404, "Failed to get channel stats from db")
+  res.status(200).json(new ApiResponse(200, info[0], "fetched channel stats successfully"))
 })
 
 const getChannelVideos = asyncHandler(async (req, res) => {
   // TODO: Get all the videos uploaded by the channel
-  const id=req.user
-  if(!id)throw ApiError(401,"failed to get channel video . user is not looged in")
-    const videos=await User.aggregate([
-  {
-    $match: {
-      _id: new mongoose.Types.ObjectId(req.user?._id)
-    }
-  },
-  {
-    $lookup:{
-      from:"videos",
-      localField:"_id",
-      foreignField:"owner",
-      as:"video",
-      pipeline:[
-        {
-          $project:{
-            videoFile:1,
-            thumbnail:1,
-            owner:1,
-            title:1,
-            description:1,
-            views:1,
-            isPublished:1
-          }
-        }
-      ]
-    }
-  },
-  
-])
-if(!videos?.length)throw new ApiError(404,"Failed to get channel stats from db")
-res.status(200).json(new ApiResponse(200,videos[0].video,"fetched channel stats successfully"))
+  const id = req.user
+  if (!id) throw ApiError(401, "failed to get channel video . user is not looged in")
+  const videos = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user?._id)
+      }
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "_id",
+        foreignField: "owner",
+        as: "video",
+        pipeline: [
+          {
+            $project: {
+              videoFile: 1,
+              thumbnail: 1,
+              owner: 1,
+              title: 1,
+              description: 1,
+              views: 1,
+              isPublished: 1
+            }
+          },
+          //may get error due to wrong placement
+          {
+            $sort: {
+              createdAt: -1
+            }
+          },
+        ]
+      }
+    },
+    
+  ])
+  if (!videos?.length) throw new ApiError(404, "Failed to get channel stats from db")
+    res.status(200).json(new ApiResponse(200, videos[0].video, "fetched channel stats successfully"))
 })
 
 export {

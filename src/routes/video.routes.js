@@ -33,6 +33,7 @@ router
 
 router
     .route("/:videoId")
+    //we have to pass lastId in each query as we are using pagination.
     .get(getVideoById)
     .delete(deleteVideo)
     .patch(upload.single("thumbnail"), updateVideo);

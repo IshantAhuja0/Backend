@@ -4,13 +4,163 @@ import ApiError from "../utils/ApiError.js"
 import ApiResponse from "../utils/ApiResponse.js"
 import asyncHandler from "../utils/asyncHandler.js"
 import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js"
+import { User } from "../models/user.modal.js"
 
+
+// const getAllVideos = asyncHandler(async (req, res) => {
+//   const { lastId, limit = 10, query, sortBy = "title", sortType = "asc", userId } = req.query
+//   //TODO: get all videos based on query, sort, pagination
+//   const userExists = await User.exists({ _is: userId })
+//   if (!userExists) throw new ApiError(400, "userId is required to get videos")
+//   let lastVideoId = null;
+//   if (lastId && mongoose.Types.ObjectId.isValid(lastId)) {
+//     lastVideoId = new mongoose.Types.ObjectId(lastId);
+//   }
+// const videos = await Video.aggregate([
+//   {
+//     $match: {
+//       owner: new mongoose.Types.ObjectId(userId),
+//       ...(query ? { title: { $regex: query, $options: "i" } } : {}),
+//       ...(lastId && mongoose.Types.ObjectId.isValid(lastId)
+//         ? {
+//             _id: {
+//               [sortType === "asc" ? "$gt" : "$lt"]: new mongoose.Types.ObjectId(lastId)
+//             }
+//           }
+//         : {})
+//     }
+//   },
+//   {
+//     $sort: {
+//       [sortBy]: sortType === "asc" ? 1 : -1,
+//       _id: 1
+//     }
+//   },
+//   {
+//     $limit: parseInt(limit)
+//   },
+//   {
+//     $project: {
+//       title: 1,
+//       owner: 1,
+//       createdAt: 1
+//     }
+//   }
+// ]);
+
+// })
+// const getAllVideos = asyncHandler(async (req, res) => {
+//   const {
+//     lastId,
+//     limit = 10,
+//     query,
+//     sortBy = "title",
+//     sortType = "asc",
+//     userId
+//   } = req.query;
+
+//   // ✅ Validate userId
+//   const userExists = await User.exists({ _id: userId });
+//   if (!userExists) {
+//     throw new ApiError(400, "userId is required to get videos");
+//   }
+
+//   // ✅ Prepare filter
+//   const filter = { owner: new mongoose.Types.ObjectId(userId) };
+
+//   if (query) {
+  //     filter.title = { $regex: query, $options: "i" };
+//   }
+
+//   if (lastId && mongoose.Types.ObjectId.isValid(lastId)) {
+  //     const lastVideoId = new mongoose.Types.ObjectId(lastId);
+  //     filter._id = {
+    //       [sortType === "asc" ? "$gt" : "$lt"]: lastVideoId
+    //     };
+//   }
+
+//   // ✅ Build sort object
+//   const sort = {
+//     [sortBy]: sortType === "asc" ? 1 : -1
+//   };
+
+//   // Always add _id as tie-breaker for pagination stability
+//   if (sortBy !== "_id") {
+//     sort._id = 1;
+//   }
+
+//   // ✅ Run aggregation
+//   const videos = await Video.aggregate([
+  //     { $match: filter },
+  //     { $sort: sort },
+//     { $limit: parseInt(limit) },
+//     {
+//       $project: {
+//         title: 1,
+//         owner: 1,
+//         createdAt: 1
+//       }
+//     }
+//   ]);
+
+//   // ✅ Respond
+//   res.status(200).json({
+//     success: true,
+//     message: "Videos fetched successfully",
+//     data: videos,
+//     nextCursor: videos.length ? videos[videos.length - 1]._id : null
+//   });
+// });
 
 const getAllVideos = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-  //TODO: get all videos based on query, sort, pagination
-})
+  const {
+    page=1,
+    limit = 10,
+    query,
+    sortBy = "createdAt",
+    sortType = "asc",
+    userId
+  } = req.query;
 
+  // ✅ Validate userId
+  const userExists = await User.exists({ _id: userId });
+  if (!userExists) {
+    throw new ApiError(400, "userId is required to get videos");
+  }
+  if(sortType==='asc')sortType=1
+  else sortType=-1
+
+ if(!query)throw new ApiError(400,"query is required to fetch videos")
+
+  const aggregate=await Video.aggregate([
+    {
+      $match:{
+        owner:mongoose.Types.ObjectId(userId)
+      }
+    },
+    {
+      $match:{
+        title:{
+          $regex:query
+        }
+      }
+    },
+    {
+      $sort:{
+        [sortBy]:sortType
+      }
+    }
+  ])
+  const customLabels={
+    totalVideos:"videoCount",
+    videos:"videos",
+    page:"currentPage"
+  }
+  const options={page,limit,customLabels}
+  const videos=await Video.aggregatePaginate(aggregate,options)
+  if(!videos)throw new ApiError(500,"problem occured while fetching videos in server")
+  return res.status(200).json(new ApiResponse(200,videos,"videos fetched successfully"))
+})
 const publishAVideo = asyncHandler(async (req, res) => {
   try {
     const { title, description } = req.body
@@ -18,13 +168,13 @@ const publishAVideo = asyncHandler(async (req, res) => {
     //required things for video upload : videoFile,thumbnail,title ,discription,duration,views,isPublished,owner
     const owner = req.user?._id
     if (!owner) throw new ApiError(401, "login to upload a video, login details not provided from req.user")
-
-    const thumbnailLocalPath = req.files?.thumbnail?.[0].path
-    const videoLocalPath = req.files?.videoFile?.[0].path
-
-    if (!thumbnailLocalPath) throw ApiError(404, "thumbnail is required to upload video")
+      
+      const thumbnailLocalPath = req.files?.thumbnail?.[0].path
+      const videoLocalPath = req.files?.videoFile?.[0].path
+      
+      if (!thumbnailLocalPath) throw ApiError(404, "thumbnail is required to upload video")
     const thumbnailUploaded = await uploadOnCloudinary(thumbnailLocalPath)
-    if (!videoLocalPath) throw ApiError(404, "video file is required to upload video")
+  if (!videoLocalPath) throw ApiError(404, "video file is required to upload video")
     const videoUploaded = await uploadOnCloudinary(videoLocalPath)
 
     if (!thumbnailUploaded) throw ApiError(404, "failed to upload thumbnail on cloudinary")
@@ -137,7 +287,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     if (!video) throw new ApiError(401, "video not found to update toggle")
     const currentStatus = video.isPublished
     const updatedStatus = currentStatus === true ? false : true
-    const updateStatus = await Video.updateOne({_id:videoId}, { $set: { isPublished: updatedStatus } })
+    const updateStatus = await Video.updateOne({ _id: videoId }, { $set: { isPublished: updatedStatus } })
     if (!updateStatus) throw new ApiError(404, "problem occured while updating toggle status")
     res.status(200).json(new ApiResponse(200, updateStatus, "updated toggle status successfully"))
   } catch (error) {
