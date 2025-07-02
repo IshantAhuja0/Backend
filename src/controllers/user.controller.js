@@ -84,7 +84,6 @@ const loginUser = asyncHandler(async (req, res) => {
   
   */
   const { email, username, password } = req.body
-  try {
     if (!email && !username) throw new ApiError(400, "email is required but not provided in user.controller.js")
 
     //if this username or email exist in db it will return .$or checks for more than one field in one query
@@ -126,9 +125,6 @@ const loginUser = asyncHandler(async (req, res) => {
         user: loggedInDetail, accessToken, refreshToken
       }, "User logged in successfully"))
 
-  } catch (error) {
-    throw new ApiError(500, "Internal server occured while loggin in user in user.controller.js" + error)
-  }
 })
 const logoutUser = asyncHandler(async (req, res) => {
   const updatedUser = await User.findByIdAndUpdate(req.user._id, { $unset: { refreshToken: 1 } }).select("-watchHistory -password -avatar -coverImage -createdAt -updatedAt -refreshToken -__v")
@@ -143,7 +139,6 @@ const logoutUser = asyncHandler(async (req, res) => {
 })
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
-  try {
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
     if (!incomingRefreshToken) throw new ApiError(401, "Unauthorized request")
 
@@ -165,13 +160,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, {
         user: loggedInDetail, accessToken, refreshToken
       }, "Access token refreshed"))
-  } catch (error) {
-    throw new ApiError(500, "Internal server error occured while refreshing access token in user.controller.js " + error)
-
-  }
 })
 const changeCurrentPassword = asyncHandler(async (req, res) => {
-  try {
     const { oldPassword, newPassword } = req.body
     const userFromMiddleware = req.user?._id
     const user = await User.findById(userFromMiddleware)
@@ -180,10 +170,6 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     user.password = newPassword
     await user.save({ validateBeforeSave: false })
     return res.status(200).json(new ApiResponse(200, {}, "password changed successfully"))
-  } catch (error) {
-
-    throw new ApiError(500, "Internal server error occured while changing password user.controller.js " + error)
-  }
 })
 
 const getCurrentUser = asyncHandler(async (req, res) => {
@@ -192,7 +178,6 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, { user: currentUser }, "current user fetched successfully"))
 })
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  try {
     const { fullname, email } = req.body
     if (!fullname || !email) throw new ApiError(4011, "fullname and email not provided . necessary for update")
     const user = req.user
@@ -207,13 +192,8 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
       { new: true }
     ).select("-password")
     return res.status(200).json(new ApiResponse(200, { user }, "account details updated successfully"))
-  } catch (error) {
-    throw new ApiError(500, "Internal server error occured while updating user account details user.controller.js " + error)
-
-  }
 })
 const updateUserAvatar = asyncHandler(async (req, res) => {
-  try {
     const avatarLocalPath = req.file?.path;
     if (!avatarLocalPath) {
       throw new ApiError(401, "Avatar not found! in updateUserAvatar user.controller.js");
@@ -256,16 +236,9 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(new ApiResponse(200, { user: updatedUser }, "Avatar updated successfully"));
-  } catch (error) {
-    throw new ApiError(
-      500,
-      "Internal server error occurred while updating avatar in user.controller.js: " + error
-    );
-  }
 
 })
 const updateUserCoverImage = asyncHandler(async (req, res) => {
-  try {
     const coverImageLocalPath = req.file?.path;
     if (!coverImageLocalPath) {
       throw new ApiError(401, "coverImage not found! in updateUserCoverImage user.controller.js");
@@ -308,10 +281,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(new ApiResponse(200, { user: updatedUser }, "Cover Image updated successfully"));
-  } catch (error) {
 
-    throw new ApiError(500, "Internal server error occured while updating cover image user.controller.js " + error)
-  }
 })
 
 //aggeration pipeline is used here
