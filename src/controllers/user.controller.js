@@ -2,8 +2,8 @@ import asyncHandler from "../utils/asyncHandler.js";
 import { User } from "../models/user.modal.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js"
 import jwt from "jsonwebtoken"
-import ApiResponse from "../utils/ApiResponse.js";
 import ApiError from "../utils/ApiError.js";
+import ApiResponse from "../utils/ApiResponse.js";
 import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (user) => {
