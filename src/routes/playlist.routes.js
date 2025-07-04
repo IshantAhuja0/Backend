@@ -11,12 +11,12 @@ import {
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
-router.use(verifyJWT); // JWT auth for all routes
+router.use(verifyJWT); // All routes require JWT
 
 /**
  * @swagger
  * tags:
- *   name: Playlists
+ *   name: Playlist
  *   description: Playlist management and operations
  */
 
@@ -25,7 +25,22 @@ router.use(verifyJWT); // JWT auth for all routes
  * /playlists:
  *   post:
  *     summary: Create a new playlist
- *     tags: [Playlists]
+ *     tags: [Playlist]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "My Playlist"
+ *     responses:
+ *       201:
+ *         description: Playlist created successfully
  */
 router.route("/").post(createPlaylist);
 
@@ -34,31 +49,46 @@ router.route("/").post(createPlaylist);
  * /playlists/{playlistId}:
  *   get:
  *     summary: Get playlist by ID
- *     tags: [Playlists]
+ *     tags: [Playlist]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: playlistId
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Playlist fetched
  *   patch:
  *     summary: Update playlist details
- *     tags: [Playlists]
+ *     tags: [Playlist]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: playlistId
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Playlist updated
  *   delete:
  *     summary: Delete a playlist
- *     tags: [Playlists]
+ *     tags: [Playlist]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: playlistId
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Playlist deleted
  */
 router.route("/:playlistId")
   .get(getPlaylistById)
@@ -70,7 +100,9 @@ router.route("/:playlistId")
  * /playlists/add/{videoId}/{playlistId}:
  *   patch:
  *     summary: Add a video to a playlist
- *     tags: [Playlists]
+ *     tags: [Playlist]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: videoId
@@ -82,6 +114,9 @@ router.route("/:playlistId")
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Video added to playlist
  */
 router.route("/add/:videoId/:playlistId").patch(addVideoToPlaylist);
 
@@ -90,7 +125,9 @@ router.route("/add/:videoId/:playlistId").patch(addVideoToPlaylist);
  * /playlists/remove/{videoId}/{playlistId}:
  *   patch:
  *     summary: Remove a video from a playlist
- *     tags: [Playlists]
+ *     tags: [Playlist]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: videoId
@@ -102,6 +139,9 @@ router.route("/add/:videoId/:playlistId").patch(addVideoToPlaylist);
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Video removed from playlist
  */
 router.route("/remove/:videoId/:playlistId").patch(removeVideoFromPlaylist);
 
@@ -110,13 +150,18 @@ router.route("/remove/:videoId/:playlistId").patch(removeVideoFromPlaylist);
  * /playlists/user/{userId}:
  *   get:
  *     summary: Get all playlists created by a user
- *     tags: [Playlists]
+ *     tags: [Playlist]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userId
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: List of playlists for the user
  */
 router.route("/user/:userId").get(getUserPlaylists);
 

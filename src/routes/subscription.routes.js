@@ -12,7 +12,7 @@ router.use(verifyJWT); // JWT auth for all routes
 /**
  * @swagger
  * tags:
- *   name: Subscriptions
+ *   name: Subscription
  *   description: Manage user subscriptions and subscribers
  */
 
@@ -21,22 +21,32 @@ router.use(verifyJWT); // JWT auth for all routes
  * /subscriptions/c/{channelId}:
  *   get:
  *     summary: Get channels subscribed by current user
- *     tags: [Subscriptions]
+ *     tags: [Subscription]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: channelId
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Subscribed channels
  *   post:
  *     summary: Toggle subscription to a channel
- *     tags: [Subscriptions]
+ *     tags: [Subscription]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: channelId
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Subscription toggled
  */
 router
   .route("/c/:channelId")
@@ -48,13 +58,18 @@ router
  * /subscriptions/u/{subscriberId}:
  *   get:
  *     summary: Get subscribers of a user channel
- *     tags: [Subscriptions]
+ *     tags: [Subscription]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: subscriberId
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Channel subscribers
  */
 router.route("/u/:subscriberId").get(getUserChannelSubscribers);
 

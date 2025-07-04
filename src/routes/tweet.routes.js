@@ -8,12 +8,12 @@ import {
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
-router.use(verifyJWT); // JWT auth for all routes
+router.use(verifyJWT); // All routes require JWT
 
 /**
  * @swagger
  * tags:
- *   name: Tweets
+ *   name: Tweet
  *   description: Tweet creation and management
  */
 
@@ -22,7 +22,22 @@ router.use(verifyJWT); // JWT auth for all routes
  * /tweets:
  *   post:
  *     summary: Create a new tweet
- *     tags: [Tweets]
+ *     tags: [Tweet]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 example: "Just posted a tweet!"
+ *     responses:
+ *       201:
+ *         description: Tweet created
  */
 router.route("/").post(createTweet);
 
@@ -31,13 +46,18 @@ router.route("/").post(createTweet);
  * /tweets/user/{userId}:
  *   get:
  *     summary: Get all tweets by a user
- *     tags: [Tweets]
+ *     tags: [Tweet]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: userId
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: List of tweets
  */
 router.route("/user/:userId").get(getUserTweets);
 
@@ -46,22 +66,42 @@ router.route("/user/:userId").get(getUserTweets);
  * /tweets/{tweetId}:
  *   patch:
  *     summary: Update a tweet
- *     tags: [Tweets]
+ *     tags: [Tweet]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: tweetId
  *         required: true
  *         schema:
  *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               content:
+ *                 type: string
+ *                 example: "Updated tweet content"
+ *     responses:
+ *       200:
+ *         description: Tweet updated
  *   delete:
  *     summary: Delete a tweet
- *     tags: [Tweets]
+ *     tags: [Tweet]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: tweetId
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Tweet deleted
  */
 router.route("/:tweetId")
   .patch(updateTweet)

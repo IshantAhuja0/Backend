@@ -22,14 +22,14 @@ import playlistRoute from "./routes/playlist.routes.js"
 import healthcheckRoute from "./routes/healthcheck.routes.js"
 import tweetRoute from "./routes/tweet.routes.js"
 // routes declaration
-app.use('/api/v1/users',userRoute)
-app.use('/api/v1/videos',videoRoute)
-app.use('/api/v1/likes',likeRoute)
-app.use('/api/v1/comments',commentRoute)
-app.use('/api/v1/subscriptions',subscriptionRoute)
-app.use('/api/v1/playlists',playlistRoute)
+app.use('/api/v1/user',userRoute)
+app.use('/api/v1/video',videoRoute)
+app.use('/api/v1/like',likeRoute)
+app.use('/api/v1/comment',commentRoute)
+app.use('/api/v1/subscription',subscriptionRoute)
+app.use('/api/v1/playlist',playlistRoute)
 app.use('/api/v1/healthcheck',healthcheckRoute)
-app.use('/api/v1/tweets',tweetRoute)
+app.use('/api/v1/tweet',tweetRoute)
 //for swagger docs
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/api-docs.json', (req, res) => res.json(swaggerSpec));

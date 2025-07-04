@@ -13,7 +13,7 @@ router.use(verifyJWT); // JWT auth for all routes
 /**
  * @swagger
  * tags:
- *   name: Likes
+ *   name: Like
  *   description: Like and unlike videos, comments, and tweets
  */
 
@@ -22,13 +22,18 @@ router.use(verifyJWT); // JWT auth for all routes
  * /likes/toggle/v/{videoId}:
  *   post:
  *     summary: Toggle like on a video
- *     tags: [Likes]
+ *     tags: [Like]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: videoId
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Video like toggled
  */
 router.route("/toggle/v/:videoId").post(toggleVideoLike);
 
@@ -37,13 +42,18 @@ router.route("/toggle/v/:videoId").post(toggleVideoLike);
  * /likes/toggle/c/{commentId}:
  *   post:
  *     summary: Toggle like on a comment
- *     tags: [Likes]
+ *     tags: [Like]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: commentId
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Comment like toggled
  */
 router.route("/toggle/c/:commentId").post(toggleCommentLike);
 
@@ -52,13 +62,18 @@ router.route("/toggle/c/:commentId").post(toggleCommentLike);
  * /likes/toggle/t/{tweetId}:
  *   post:
  *     summary: Toggle like on a tweet
- *     tags: [Likes]
+ *     tags: [Like]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: tweetId
  *         required: true
  *         schema:
  *           type: string
+ *     responses:
+ *       200:
+ *         description: Tweet like toggled
  */
 router.route("/toggle/t/:tweetId").post(toggleTweetLike);
 
@@ -67,7 +82,12 @@ router.route("/toggle/t/:tweetId").post(toggleTweetLike);
  * /likes/videos:
  *   get:
  *     summary: Get all liked videos of current user
- *     tags: [Likes]
+ *     tags: [Like]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of liked videos
  */
 router.route("/videos").get(getLikedVideos);
 

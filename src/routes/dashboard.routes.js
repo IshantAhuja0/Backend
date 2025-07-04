@@ -6,7 +6,7 @@ import {
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
-router.use(verifyJWT); // JWT auth for all routes
+router.use(verifyJWT); // All routes below require JWT
 
 /**
  * @swagger
@@ -21,6 +21,8 @@ router.use(verifyJWT); // JWT auth for all routes
  *   get:
  *     summary: Get channel statistics
  *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Channel stats fetched
@@ -33,6 +35,8 @@ router.route("/stats").get(getChannelStats);
  *   get:
  *     summary: Get videos uploaded by the channel
  *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Channel videos fetched
