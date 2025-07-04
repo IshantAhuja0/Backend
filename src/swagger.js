@@ -12,10 +12,22 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: "http://localhost:8000/api/v1",
-      description: "Development server",
+      url: "https://videotube-rtub.onrender.com/api/v1",
+      description: "Server",
     },
   ],
+tags: [
+  { name: "User", description: "User registration, profile, and auth APIs" },
+  { name: "Healthcheck", description: "Health check APIs for status monitoring" },
+  { name: "Video", description: "Video uploading, viewing, and management APIs" },
+  { name: "Dashboard", description: "Admin or user dashboard APIs" },
+  { name: "Subscription", description: "Subscribe/Unsubscribe channel APIs" },
+  { name: "Like", description: "Like and dislike APIs" },
+  { name: "Playlist", description: "User playlist APIs" },
+  { name: "Comment", description: "Comment and reply APIs" },
+  { name: "Tweet", description: "Tweet-like micro-posting APIs" }
+]
+
 };
 
 const options = {

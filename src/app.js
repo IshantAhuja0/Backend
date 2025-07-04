@@ -11,8 +11,6 @@ app.use(express.json({limit:"16kb"}))
 app.use(express.urlencoded({extended:true,limit:"16kb"}))
 app.use(express.static("public"))
 app.use(cookieParser())
-//for swagger docs
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 //routes 
 import userRoute from "./routes/user.routes.js"
@@ -32,5 +30,9 @@ app.use('/api/v1/subscriptions',subscriptionRoute)
 app.use('/api/v1/playlists',playlistRoute)
 app.use('/api/v1/healthcheck',healthcheckRoute)
 app.use('/api/v1/tweets',tweetRoute)
+//for swagger docs
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get('/api-docs.json', (req, res) => res.json(swaggerSpec));
+
 
 export {app};
