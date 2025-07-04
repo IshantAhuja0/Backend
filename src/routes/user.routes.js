@@ -21,8 +21,8 @@ const router = Router();
 /**
  * @swagger
  * tags:
- *   name: Users
- *   description: User management and authentication
+ *   name: User
+ *   description: User registration, profile, and auth APIs
  */
 
 /**
@@ -30,7 +30,7 @@ const router = Router();
  * /users/register:
  *   post:
  *     summary: Register a new user
- *     tags: [Users]
+ *     tags: [User]
  *     consumes:
  *       - multipart/form-data
  *     requestBody:
@@ -66,7 +66,7 @@ router.route("/register").post(upload.fields([
  * /users/login:
  *   post:
  *     summary: Login user
- *     tags: [Users]
+ *     tags: [User]
  *     requestBody:
  *       required: true
  *       content:
@@ -89,7 +89,7 @@ router.route("/login").post(loginUser);
  * /users/logout:
  *   post:
  *     summary: Logout user
- *     tags: [Users]
+ *     tags: [User]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -103,7 +103,7 @@ router.route("/logout").post(verifyJWT, logoutUser);
  * /users/refreshtoken:
  *   post:
  *     summary: Refresh access token
- *     tags: [Users]
+ *     tags: [User]
  *     responses:
  *       200:
  *         description: Token refreshed
@@ -115,7 +115,7 @@ router.route("/refreshtoken").post(refreshAccessToken);
  * /users/change-password:
  *   post:
  *     summary: Change current password
- *     tags: [Users]
+ *     tags: [User]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -140,7 +140,7 @@ router.route("/change-password").post(verifyJWT, changeCurrentPassword);
  * /users/current-user:
  *   get:
  *     summary: Get currently logged-in user
- *     tags: [Users]
+ *     tags: [User]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -154,7 +154,7 @@ router.route("/current-user").get(verifyJWT, getCurrentUser);
  * /users/update-account:
  *   patch:
  *     summary: Update account details
- *     tags: [Users]
+ *     tags: [User]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -179,7 +179,7 @@ router.route("/update-account").patch(verifyJWT, updateAccountDetails);
  * /users/avatar:
  *   patch:
  *     summary: Update user avatar
- *     tags: [Users]
+ *     tags: [User]
  *     security:
  *       - bearerAuth: []
  *     consumes:
@@ -191,21 +191,21 @@ router.route("/update-account").patch(verifyJWT, updateAccountDetails);
  *           schema:
  *             type: object
  *             properties:
- *               avater:
+ *               avatar:
  *                 type: string
  *                 format: binary
  *     responses:
  *       200:
  *         description: Avatar updated
  */
-router.route("/avatar").patch(verifyJWT, upload.single("avater"), updateUserAvatar);
+router.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar);
 
 /**
  * @swagger
  * /users/cover-image:
  *   patch:
  *     summary: Update user cover image
- *     tags: [Users]
+ *     tags: [User]
  *     security:
  *       - bearerAuth: []
  *     consumes:
@@ -231,7 +231,7 @@ router.route("/cover-image").patch(verifyJWT, upload.single("coverImage"), updat
  * /users/c/{username}:
  *   get:
  *     summary: Get user channel profile by username
- *     tags: [Users]
+ *     tags: [User]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -251,7 +251,7 @@ router.route("/c/:username").get(verifyJWT, getUserChannelProfile);
  * /users/history:
  *   get:
  *     summary: Get user watch history
- *     tags: [Users]
+ *     tags: [User]
  *     security:
  *       - bearerAuth: []
  *     responses:
