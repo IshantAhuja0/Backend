@@ -8,7 +8,9 @@ import {
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
-router.use(verifyJWT); // All routes require JWT
+
+// Apply JWT verification to all tweet routes
+router.use(verifyJWT);
 
 /**
  * @swagger
@@ -37,7 +39,11 @@ router.use(verifyJWT); // All routes require JWT
  *                 example: "Just posted a tweet!"
  *     responses:
  *       201:
- *         description: Tweet created
+ *         description: Tweet created successfully
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Server error
  */
 router.route("/").post(createTweet);
 
@@ -57,7 +63,11 @@ router.route("/").post(createTweet);
  *           type: string
  *     responses:
  *       200:
- *         description: List of tweets
+ *         description: List of tweets for the user
+ *       400:
+ *         description: Invalid userId
+ *       500:
+ *         description: Server error
  */
 router.route("/user/:userId").get(getUserTweets);
 
@@ -65,7 +75,7 @@ router.route("/user/:userId").get(getUserTweets);
  * @swagger
  * /tweets/{tweetId}:
  *   patch:
- *     summary: Update a tweet
+ *     summary: Update an existing tweet
  *     tags: [Tweet]
  *     security:
  *       - bearerAuth: []
@@ -87,7 +97,12 @@ router.route("/user/:userId").get(getUserTweets);
  *                 example: "Updated tweet content"
  *     responses:
  *       200:
- *         description: Tweet updated
+ *         description: Tweet updated successfully
+ *       400:
+ *         description: Invalid input or tweetId
+ *       500:
+ *         description: Server error
+ * 
  *   delete:
  *     summary: Delete a tweet
  *     tags: [Tweet]
@@ -101,7 +116,11 @@ router.route("/user/:userId").get(getUserTweets);
  *           type: string
  *     responses:
  *       200:
- *         description: Tweet deleted
+ *         description: Tweet deleted successfully
+ *       400:
+ *         description: Invalid tweetId
+ *       500:
+ *         description: Server error
  */
 router.route("/:tweetId")
   .patch(updateTweet)

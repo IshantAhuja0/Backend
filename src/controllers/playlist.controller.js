@@ -13,7 +13,7 @@ const createPlaylist = asyncHandler(async (req, res) => {
   //TODO: create playlist
   if (!name || !owner) throw new ApiError(400, "name and logged in user is required to create playlist")
   if (name === "" || name.trim().length === 0) throw new ApiError(400, "name is empty invalid for making playlist")
-  const userExists = User.exists({ _id: owner })
+  const userExists =await User.exists({ _id: owner })
   if (!userExists) throw new ApiError(404, "invalid user credentials")
   //also check if same user have created for playlist with same name earlier
   const playlistAlreadyExists = await Playlist.findOne({ owner: owner, name: name })
@@ -30,9 +30,9 @@ const createPlaylist = asyncHandler(async (req, res) => {
 const getUserPlaylists = asyncHandler(async (req, res) => {
   const { userId } = req.params
   //TODO: get user playlists
-  const userExists = User.exists({ _id: userId })
+  const userExists =await User.exists({ _id: userId })
   if (!userExists) throw new ApiError(400, "user details not provided or user not exists")
-  const playlists = Playlist.aggregate([
+  const playlists =await Playlist.aggregate([
     {
       $match: {
         owner: new mongoose.Types.ObjectId(userId)
@@ -69,7 +69,8 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
     }
   ])
   if (!playlists) throw new ApiError(500, "problem occured while fetching playlists")
-  return new ApiResponse.status(200).json(new ApiResponse(200, playlists, "fetched playlists successfully"))
+return res.status(200).json(new ApiResponse(200, playlists, "fetched playlists successfully"))
+
 })
 
 const getPlaylistById = asyncHandler(async (req, res) => {
@@ -106,7 +107,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
   // const videoDeleted = await Playlist.updateOne({_id:playlistId}, { $pull: { videos: videoId } }, { new: true })
   const videoDeleted = await Playlist.findByIdAndUpdate(playlistId, { $pull: { videos: videoId } }, { new: true })
   if (!videoDeleted) throw new ApiError(500, "problem occured while deleting video from playlist")
-    return res.status(200).json(new ApiResponse(200, videoDeleted, "added video to playlist successfully"))
+    return res.status(200).json(new ApiResponse(200, videoDeleted, "removed video from playlist successfully"))
   
 })
 

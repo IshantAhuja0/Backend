@@ -39,6 +39,12 @@ const router = Router();
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required:
+ *               - fullname
+ *               - email
+ *               - username
+ *               - password
+ *               - avatar
  *             properties:
  *               avatar:
  *                 type: string
@@ -46,20 +52,28 @@ const router = Router();
  *               coverImage:
  *                 type: string
  *                 format: binary
- *               name:
+ *               fullname:
  *                 type: string
  *               email:
+ *                 type: string
+ *               username:
  *                 type: string
  *               password:
  *                 type: string
  *     responses:
  *       201:
  *         description: User registered successfully
+ *       400:
+ *         description: Bad request
  */
-router.route("/register").post(upload.fields([
-  { name: "avatar", maxCount: 1 },
-  { name: "coverImage", maxCount: 1 }
-]), registerUser);
+router.post(
+  "/register",
+  upload.fields([
+    { name: "avatar", maxCount: 1 },
+    { name: "coverImage", maxCount: 1 }
+  ]),
+  registerUser
+);
 
 /**
  * @swagger
@@ -76,13 +90,17 @@ router.route("/register").post(upload.fields([
  *             properties:
  *               email:
  *                 type: string
+ *               username:
+ *                 type: string
  *               password:
  *                 type: string
  *     responses:
  *       200:
- *         description: Logged in successfully
+ *         description: User logged in successfully
+ *       401:
+ *         description: Invalid credentials
  */
-router.route("/login").post(loginUser);
+router.post("/login", loginUser);
 
 /**
  * @swagger
@@ -96,7 +114,7 @@ router.route("/login").post(loginUser);
  *       200:
  *         description: Logged out successfully
  */
-router.route("/logout").post(verifyJWT, logoutUser);
+router.post("/logout", verifyJWT, logoutUser);
 
 /**
  * @swagger
@@ -104,11 +122,15 @@ router.route("/logout").post(verifyJWT, logoutUser);
  *   post:
  *     summary: Refresh access token
  *     tags: [User]
+ *     requestBody:
+ *       required: false
  *     responses:
  *       200:
  *         description: Token refreshed
+ *       401:
+ *         description: Invalid or missing refresh token
  */
-router.route("/refreshtoken").post(refreshAccessToken);
+router.post("/refreshtoken", refreshAccessToken);
 
 /**
  * @swagger
@@ -124,6 +146,9 @@ router.route("/refreshtoken").post(refreshAccessToken);
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - oldPassword
+ *               - newPassword
  *             properties:
  *               oldPassword:
  *                 type: string
@@ -132,8 +157,10 @@ router.route("/refreshtoken").post(refreshAccessToken);
  *     responses:
  *       200:
  *         description: Password changed successfully
+ *       401:
+ *         description: Invalid old password
  */
-router.route("/change-password").post(verifyJWT, changeCurrentPassword);
+router.post("/change-password", verifyJWT, changeCurrentPassword);
 
 /**
  * @swagger
@@ -147,7 +174,7 @@ router.route("/change-password").post(verifyJWT, changeCurrentPassword);
  *       200:
  *         description: User info returned
  */
-router.route("/current-user").get(verifyJWT, getCurrentUser);
+router.get("/current-user", verifyJWT, getCurrentUser);
 
 /**
  * @swagger
@@ -164,7 +191,7 @@ router.route("/current-user").get(verifyJWT, getCurrentUser);
  *           schema:
  *             type: object
  *             properties:
- *               name:
+ *               fullname:
  *                 type: string
  *               email:
  *                 type: string
@@ -172,7 +199,7 @@ router.route("/current-user").get(verifyJWT, getCurrentUser);
  *       200:
  *         description: Account updated
  */
-router.route("/update-account").patch(verifyJWT, updateAccountDetails);
+router.patch("/update-account", verifyJWT, updateAccountDetails);
 
 /**
  * @swagger
@@ -198,7 +225,7 @@ router.route("/update-account").patch(verifyJWT, updateAccountDetails);
  *       200:
  *         description: Avatar updated
  */
-router.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar);
+router.patch("/avatar", verifyJWT, upload.single("avatar"), updateUserAvatar);
 
 /**
  * @swagger
@@ -224,7 +251,7 @@ router.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvat
  *       200:
  *         description: Cover image updated
  */
-router.route("/cover-image").patch(verifyJWT, upload.single("coverImage"), updateUserCoverImage);
+router.patch("/cover-image", verifyJWT, upload.single("coverImage"), updateUserCoverImage);
 
 /**
  * @swagger
@@ -243,8 +270,10 @@ router.route("/cover-image").patch(verifyJWT, upload.single("coverImage"), updat
  *     responses:
  *       200:
  *         description: Channel profile returned
+ *       404:
+ *         description: Channel not found
  */
-router.route("/c/:username").get(verifyJWT, getUserChannelProfile);
+router.get("/c/:username", verifyJWT, getUserChannelProfile);
 
 /**
  * @swagger
@@ -257,7 +286,9 @@ router.route("/c/:username").get(verifyJWT, getUserChannelProfile);
  *     responses:
  *       200:
  *         description: Watch history fetched
+ *       404:
+ *         description: No watch history found
  */
-router.route("/history").get(verifyJWT, getWatchHistory);
+router.get("/history", verifyJWT, getWatchHistory);
 
 export default router;

@@ -7,54 +7,64 @@ import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js
 import { User } from "../models/user.modal.js"
 
 const getAllVideos = asyncHandler(async (req, res) => {
-  const {
+  let {
     page = 1,
     limit = 10,
-    query,
+    query = "",
     sortBy = "createdAt",
     sortType = "asc",
     userId
   } = req.query;
 
+  page = parseInt(page, 10);
+  limit = parseInt(limit, 10);
+  sortType = sortType === "asc" ? 1 : -1;
+
   // ✅ Validate userId
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, "Valid userId is required to get videos");
+  }
+
   const userExists = await User.exists({ _id: userId });
   if (!userExists) {
-    throw new ApiError(400, "userId is required to get videos");
+    throw new ApiError(404, "User not found");
   }
-  if (sortType === 'asc') sortType = 1
-  else sortType = -1
 
-  if (!query) throw new ApiError(400, "query is required to fetch videos")
-
-  const aggregate = await Video.aggregate([
+  const aggregate = Video.aggregate([
     {
       $match: {
-        owner: mongoose.Types.ObjectId(userId)
+        owner: new mongoose.Types.ObjectId(userId),
+        title: { $regex: query, $options: "i" }
       }
     },
     {
-      $match: {
-        title: {
-          $regex: query
-        }
-      }
-    },
-    {
-      $sort: {
-        [sortBy]: sortType
-      }
+      $sort: { [sortBy]: sortType }
     }
-  ])
+  ]);
+
   const customLabels = {
-    totalVideos: "videoCount",
-    videos: "videos",
+    totalDocs: "videoCount",
+    docs: "videos",
     page: "currentPage"
+  };
+
+  const options = {
+    page,
+    limit,
+    customLabels
+  };
+
+  const videos = await Video.aggregatePaginate(aggregate, options);
+
+  if (!videos) {
+    throw new ApiError(500, "Problem occurred while fetching videos");
   }
-  const options = { page, limit, customLabels }
-  const videos = await Video.aggregatePaginate(aggregate, options)
-  if (!videos) throw new ApiError(500, "problem occured while fetching videos in server")
-  return res.status(200).json(new ApiResponse(200, videos, "videos fetched successfully"))
-})
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, videos, "Videos fetched successfully"));
+});
+
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description } = req.body
     // TODO: get video, upload to cloudinary, create video

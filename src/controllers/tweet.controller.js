@@ -1,108 +1,111 @@
-import mongoose, { isValidObjectId } from "mongoose"
-import { Tweet } from "../models/tweet.modal.js"
-import { User } from "../models/user.modal.js"
-import ApiError from "../utils/ApiError.js"
-import ApiResponse from "../utils/ApiResponse.js"
-import asyncHandler from "../utils/asyncHandler.js"
+import mongoose from "mongoose";
+import { Tweet } from "../models/tweet.modal.js";
+import { User } from "../models/user.modal.js";
+import ApiError from "../utils/ApiError.js";
+import ApiResponse from "../utils/ApiResponse.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
 const createTweet = asyncHandler(async (req, res) => {
-  //TODO: create tweet
-  const { content } = req.body
-  const userId = req.user?._id
-  const userExits = await User.exists({ _id: userId })
-  if (!userExits) throw new ApiError(400, "userId is required to tweet ,userId not provided or invalid")
-  if (!content || content === "" || content.trim().length === 0) throw new ApiError(400, "tweet content is required to make a tweet ,tweet content empty or not defined")
+  const { content } = req.body;
+  const userId = req.user?._id;
+
+  const userExists = await User.exists({ _id: userId });
+  if (!userExists) throw new ApiError(400, "User not found or invalid userId");
+
+  if (!content || content.trim().length === 0)
+    throw new ApiError(400, "Tweet content is required and cannot be empty");
+
   const makeTweet = await Tweet.create({
     content,
-    owner: userId
-  })
-  if (!makeTweet) throw new ApiError(500, "problem while creating a tweet in server")
-  return res.status(200).json(new ApiResponse(200, makeTweet, "tweet posted successfully"))
-})
+    owner: userId,
+  });
+
+  if (!makeTweet) throw new ApiError(500, "Failed to create tweet");
+
+  return res.status(201).json(new ApiResponse(201, makeTweet, "Tweet posted successfully"));
+});
 
 const getUserTweets = asyncHandler(async (req, res) => {
-  // TODO: get user tweets
-  const userId = req.params.userId
-  const userExits = await User.exists({ _id: userId })
-  if (!userExits) throw new ApiError(400, "user id is required to get tweets..userId not found")
+  const userId = req.params.userId;
+  const userExists = await User.exists({ _id: userId });
+  if (!userExists) throw new ApiError(400, "User not found with provided userId");
+
+  const totalTweetsCount = await Tweet.countDocuments({ owner: userId });
+
   const tweets = await Tweet.aggregate([
-    {
-      $match: {
-        owner: new mongoose.Types.ObjectId(userId)
-      }
-    },
-    {
-      $sort: {
-        createdAt: -1
-      }
-    },
+    { $match: { owner: new mongoose.Types.ObjectId(userId) } },
+    { $sort: { createdAt: -1 } },
     {
       $lookup: {
         from: "users",
         localField: "owner",
         foreignField: "_id",
         as: "ownerDetails",
-        pipeline: [
-          {
-            $project: {
-              fullname: 1,
-              username: 1,
-              avatar: 1
-            }
-          }
-        ]
-      }
+        pipeline: [{ $project: { fullname: 1, username: 1, avatar: 1 } }],
+      },
     },
-    {
-      $unwind: "$ownerDetails"
-    },
-    //it may cause error as ownerDetails doesn't gives total tweets
+    { $unwind: "$ownerDetails" },
     {
       $addFields: {
-        totalTweets: {
-          $literal: await Tweet.countDocuments({ owner: userId })
-        }
-      }
-    }
+        totalTweets: totalTweetsCount,
+      },
+    },
+  ]);
 
-  ])
-  if (!tweets) throw new ApiError(500, "problem occured while fetching tweets of user")
-  return res.status(200).json(new ApiResponse(200, tweets, "tweets fetched successfully"))
-})
+  if (!tweets) throw new ApiError(500, "Failed to fetch tweets");
+
+  return res.status(200).json(new ApiResponse(200, tweets, "Tweets fetched successfully"));
+});
 
 const updateTweet = asyncHandler(async (req, res) => {
-  //TODO: update tweet
-  const userId = req.user?._id
-  const { content } = req.body
-  const tweetId = req.params.tweetId
+  const userId = req.user?._id;
+  const { content } = req.body;
+  const tweetId = req.params.tweetId;
+
   const [userExists, tweetExists] = await Promise.all([
     User.exists({ _id: userId }),
-    Tweet.exists({ _id: tweetId })
-  ])
-  if (!userExists || !tweetExists) throw new ApiError(400, "user or tweet dons't exist .unable to update tweet")
-  if (!content || content === "" || content.trim() === 0) throw new ApiError(400, "content must be provided and not empty.unable to update tweet")
-  const updatedTweet = Tweet.findByIdAndUpdate(tweetId, { $set: { content: content } }, { new: true, runValidators: true })
-  if (!updatedTweet) (500, "problem occured while updating tweet in server.")
-  return res.status(200).json(new ApiResponse(200, updatedTweet, "tweet updated successfully"))
-})
+    Tweet.exists({ _id: tweetId }),
+  ]);
+  if (!userExists || !tweetExists)
+    throw new ApiError(400, "User or tweet doesn't exist");
+
+  if (!content || content.trim().length === 0)
+    throw new ApiError(400, "Content must be provided and not empty");
+
+  const updatedTweet = await Tweet.findByIdAndUpdate(
+    tweetId,
+    { $set: { content } },
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedTweet)
+    throw new ApiError(500, "Failed to update tweet");
+
+  return res.status(200).json(new ApiResponse(200, updatedTweet, "Tweet updated successfully"));
+});
 
 const deleteTweet = asyncHandler(async (req, res) => {
-  //TODO: delete tweet
-  const userId = req.user?._id
-  const tweetId = req.params.tweetId
+  const userId = req.user?._id;
+  const tweetId = req.params.tweetId;
+
   const [userExists, tweetExists] = await Promise.all([
     User.exists({ _id: userId }),
-    Tweet.exists({ _id: tweetId })
-  ])
-  if (!userExists || !tweetExists) throw new ApiError(400, "user or tweet dons't exist .unable to delete tweet")
-  const deletedTweet = Tweet.findByIdAndDelete(tweetId, { new: true })
-  if (!deletedTweet) (500, "problem occured while deleting tweet in server.")
-  return res.status(200).json(new ApiResponse(200, deletedTweet, "tweet deleted successfully"))
-})
+    Tweet.exists({ _id: tweetId }),
+  ]);
+  if (!userExists || !tweetExists)
+    throw new ApiError(400, "User or tweet doesn't exist");
+
+  const deletedTweet = await Tweet.findByIdAndDelete(tweetId);
+
+  if (!deletedTweet)
+    throw new ApiError(500, "Failed to delete tweet");
+
+  return res.status(200).json(new ApiResponse(200, deletedTweet, "Tweet deleted successfully"));
+});
 
 export {
   createTweet,
   getUserTweets,
   updateTweet,
-  deleteTweet
-}
+  deleteTweet,
+};

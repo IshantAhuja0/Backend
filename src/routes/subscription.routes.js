@@ -20,7 +20,7 @@ router.use(verifyJWT); // JWT auth for all routes
  * @swagger
  * /subscriptions/c/{channelId}:
  *   get:
- *     summary: Get channels subscribed by current user
+ *     summary: Get the list of channels the current user is subscribed to
  *     tags: [Subscription]
  *     security:
  *       - bearerAuth: []
@@ -28,13 +28,14 @@ router.use(verifyJWT); // JWT auth for all routes
  *       - in: path
  *         name: channelId
  *         required: true
+ *         description: ID of the user to get subscribed channels for
  *         schema:
  *           type: string
  *     responses:
  *       200:
- *         description: Subscribed channels
+ *         description: List of subscribed channels retrieved successfully
  *   post:
- *     summary: Toggle subscription to a channel
+ *     summary: Toggle subscription status to a specific channel
  *     tags: [Subscription]
  *     security:
  *       - bearerAuth: []
@@ -42,11 +43,12 @@ router.use(verifyJWT); // JWT auth for all routes
  *       - in: path
  *         name: channelId
  *         required: true
+ *         description: ID of the channel to subscribe or unsubscribe
  *         schema:
  *           type: string
  *     responses:
  *       200:
- *         description: Subscription toggled
+ *         description: Subscription status toggled successfully
  */
 router
   .route("/c/:channelId")
@@ -57,7 +59,7 @@ router
  * @swagger
  * /subscriptions/u/{subscriberId}:
  *   get:
- *     summary: Get subscribers of a user channel
+ *     summary: Get all subscribers of a specific user channel
  *     tags: [Subscription]
  *     security:
  *       - bearerAuth: []
@@ -65,11 +67,12 @@ router
  *       - in: path
  *         name: subscriberId
  *         required: true
+ *         description: ID of the user channel to get subscribers for
  *         schema:
  *           type: string
  *     responses:
  *       200:
- *         description: Channel subscribers
+ *         description: List of subscribers retrieved successfully
  */
 router.route("/u/:subscriberId").get(getUserChannelSubscribers);
 
